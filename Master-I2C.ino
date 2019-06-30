@@ -30,21 +30,20 @@ void sendCommand()
         }
     }
     else{
-        if (dir){
-            setpointAngle += 15;
-            if (setpointAngle > 14){
-                dir = false;
-            }
-        }
-        else{
-            setpointAngle -= 15;
-            if (setpointAngle < -14){
-                dir = true;
-            }
-        }
+        // if (dir){
+        //     setpointAngle += 40;
+        //     if (setpointAngle > 39){
+        //         dir = false;
+        //     }
+        // }
+        // else{
+        //     setpointAngle -= 40;
+        //     if (setpointAngle < -39){
+        //         dir = true;
+        //     }
+        // }
 
     }
-    //Serial.println(setpointAngle);
 
     Wire.beginTransmission(driverAddress); // transmit to device #8
     Wire.write(setpointAngle);              // sends one byte
@@ -64,15 +63,13 @@ void ReceiveData()
     Serial.print('\n');
 }
 
-//StaticThreadController<2> controll (commanderThread, receiverThread);
-
 void setup() {
     Wire.begin(0x00);        // join i2c bus
     Serial.begin(230400);    // setup serial for debug
 
     // setup threads
     commanderThread.onRun(sendCommand);
-    commanderThread.setInterval(1000);
+    commanderThread.setInterval(10);
 
 	receiverThread.onRun(ReceiveData);
 	receiverThread.setInterval(10);
