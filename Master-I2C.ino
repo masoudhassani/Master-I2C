@@ -2,10 +2,16 @@
 #include <Thread.h>
 #include <ThreadController.h>
 
+// master and slave addresses
 const int driverAddress = 0x01;
 const int masterAddress = 0x00;
-int8_t setpointAngle = 0;
-int8_t data[8];
+
+// i2c send/receive variables
+const uint8_t sizeOfData = 8;    // expected data from slave is 8 bytes. this might change
+int8_t data[sizeOfData];
+String command = "";
+
+// master serial command variables
 byte c;
 String incommingData = "";
 bool dir = false;
@@ -17,6 +23,7 @@ ThreadController multiThread = ThreadController();
 Thread commanderThread = Thread();    // to send commands
 Thread receiverThread = Thread();    // to receive data from motor
 
+// function to read the master's serial bus and send the content to slave through i2c
 void sendCommand()
 {
     if (Serial.available() > 0){
@@ -25,29 +32,14 @@ void sendCommand()
             incommingData += (char)c;
         }
         else{
-            setpointAngle = incommingData.toInt();
+            command = incommingData;
+            Wire.beginTransmission(driverAddress); // transmit to device #8
+            Wire.write(command.c_str());              // sends one byte
+            Wire.endTransmission();    // stop transmitting
+            Serial.print("Echoing last command: ");Serial.print(command);Serial.print(" to slave 0x");Serial.println(driverAddress);
             incommingData = "";
         }
     }
-    else{
-        // if (dir){
-        //     setpointAngle += 40;
-        //     if (setpointAngle > 39){
-        //         dir = false;
-        //     }
-        // }
-        // else{
-        //     setpointAngle -= 40;
-        //     if (setpointAngle < -39){
-        //         dir = true;
-        //     }
-        // }
-
-    }
-
-    Wire.beginTransmission(driverAddress); // transmit to device #8
-    Wire.write(setpointAngle);              // sends one byte
-    Wire.endTransmission();    // stop transmitting
 }
 
 void ReceiveData()
@@ -59,8 +51,7 @@ void ReceiveData()
         data[i] = c;
         i += 1;
     }
-    Serial.print(data[0]);Serial.print('\t');Serial.print(data[1]);Serial.print('\t');
-    Serial.print('\n');
+    Serial.print(data[0]);Serial.print('\t');Serial.print(data[1]);Serial.print('\n');
 }
 
 void setup() {
@@ -71,12 +62,12 @@ void setup() {
     commanderThread.onRun(sendCommand);
     commanderThread.setInterval(10);
 
-	receiverThread.onRun(ReceiveData);
-	receiverThread.setInterval(10);
+    receiverThread.onRun(ReceiveData);
+    receiverThread.setInterval(10);
 
     // Adds both threads to the controller
-	multiThread.add(&commanderThread);
-	multiThread.add(&receiverThread);
+    multiThread.add(&commanderThread);
+    multiThread.add(&receiverThread);
 }
 
 
