@@ -2,12 +2,16 @@
 #include <Thread.h>
 #include <ThreadController.h>
 
+// define if the code is running in debug mode
+bool  debugMode = false;
+
 // master and slave addresses
 const int driverAddress = 0x01;
 const int masterAddress = 0x00;
+const int analogInPin   = A0;
 
 // i2c send/receive variables
-const uint8_t sizeOfData = 8;    // expected data from slave is 8 bytes. this might change
+const uint8_t sizeOfData = 10;    // expected data from slave is 10 bytes. this might change
 int8_t data[sizeOfData];
 String command = "";
 
@@ -33,12 +37,30 @@ void sendCommand()
         }
         else{
             command = incommingData;
-            Wire.beginTransmission(driverAddress); // transmit to device #8
-            Wire.write(command.c_str());              // sends one byte
-            Wire.endTransmission();    // stop transmitting
+            Wire.beginTransmission(driverAddress);    // transmit to device
+            Wire.write(command.c_str());              // sends a string
+            Wire.endTransmission();                  // stop transmitting
             Serial.print("Echoing last command: ");Serial.print(command);Serial.print(" to slave 0x");Serial.println(driverAddress);
             incommingData = "";
         }
+    }
+
+    // for debug use only
+    // read analog input from potentiometer and map it to an angle range and send it to motor driver
+    if (debugMode){
+        // read the analog in value
+        int16_t joyStick = analogRead(analogInPin);
+
+        // map it to the range of the angle out
+        int8_t setpointAngle = map(joyStick, 0, 1024, -45, 45);
+
+        // print the angle setpoint from analog input
+        Serial.print(setpointAngle);Serial.print('\t');
+
+        char cstr[4];
+        Wire.beginTransmission(driverAddress);
+        Wire.write(itoa(setpointAngle, cstr, 10));
+        Wire.endTransmission();
     }
 }
 
@@ -68,6 +90,10 @@ void setup() {
     // Adds both threads to the controller
     multiThread.add(&commanderThread);
     multiThread.add(&receiverThread);
+
+    if (debugMode){
+        pinMode(analogInPin, INPUT);
+    }
 }
 
 
