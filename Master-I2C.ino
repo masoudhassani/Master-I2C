@@ -42,6 +42,7 @@ dataPackage_t motor;
 String incommingData = "";
 String command = "";
 int16_t setpointAngle;
+uint16_t stepCounter = 0;
 
 
 // controll that will controll all threads
@@ -50,6 +51,7 @@ ThreadController multiThread = ThreadController();
 // initialize threads for multi tasking
 Thread commanderThread = Thread();    // to send commands
 Thread receiverThread = Thread();    // to receive data from motor
+Thread motionThread = Thread();    // to move the motor to pre defined position
 
 // function to read the master's serial bus and send the content to slave through i2c
 void sendCommand()
@@ -89,7 +91,7 @@ void sendCommand()
 }
 
 // function to receive motor driver data
-void ReceiveData()
+void receiveData()
 {
     uint8_t i = 0;
     byte buffer[sizeOfData];
@@ -124,8 +126,33 @@ void ReceiveData()
 
     Serial.print(motor.status.angle);Serial.print('\t');
     Serial.print(motor.status.velocity);Serial.print('\t');
+    //Serial.print(motor.status.current);Serial.print('\t');
     //Serial.print(setpointAngle);Serial.print('\t');    // print setpoint for comparison
     Serial.print('\n');
+}
+
+// function to send automatic commands to move the motor
+void motionControl()
+{
+    stepCounter += 1;
+    if (stepCounter < 200){
+        Wire.beginTransmission(driverAddress);
+        Wire.write("G2 A120");          // set angle
+        Wire.endTransmission();
+    }
+    else if (stepCounter >= 200 and stepCounter < 300){
+        Wire.beginTransmission(driverAddress);
+        Wire.write("G2 A0");          // set angle
+        Wire.endTransmission();
+    }
+    else if (stepCounter >= 300 and stepCounter <= 450){
+        Wire.beginTransmission(driverAddress);
+        Wire.write("G2 A-120");         // set angle
+        Wire.endTransmission();
+    }
+    else if (stepCounter > 450){
+        stepCounter = 0;
+    }
 }
 
 void setup() {
@@ -136,12 +163,16 @@ void setup() {
     commanderThread.onRun(sendCommand);
     commanderThread.setInterval(10);
 
-    receiverThread.onRun(ReceiveData);
+    receiverThread.onRun(receiveData);
     receiverThread.setInterval(10);
+
+    motionThread.onRun(motionControl);
+    motionThread.setInterval(10);
 
     // Adds both threads to the controller
     multiThread.add(&commanderThread);
     multiThread.add(&receiverThread);
+    multiThread.add(&motionThread);
 
     if (debugMode){
         pinMode(analogInPin, INPUT);
