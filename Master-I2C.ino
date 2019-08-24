@@ -11,23 +11,24 @@ const int masterAddress = 0x00;
 const int analogInPin   = A0;
 
 // i2c send/receive variables
-const uint8_t sizeOfData = 10;    // expected data size from slave in number of bytes. this might change
+const uint8_t sizeOfData = 4;    // expected data size from slave in number of bytes. this might change
 
 // ----------------------- data structure for motor data ---------------------
 /*
 define data structure for receiving data
-it creates a structure of 144 bites including four 32bit float,
-one 8bit integer and eight booleans.
+it creates a structure of 56 bites including one 32bit float,
+one 16bit integer, one 8bit integer
 */
 // data structure setup
 typedef struct motorData_t
 {
     float    angle;
-    float    velocity;
-    float    acceleration;
-    float    current;
+    // float    velocity;
+    // float    acceleration;
+    // float    current;
+    uint16_t    current;
     uint8_t  temperature;
-    uint8_t  booleans;
+    // uint8_t  booleans;
 };
 
 typedef union dataPackage_t
@@ -95,6 +96,7 @@ void receiveData()
 {
     uint8_t i = 0;
     byte buffer[sizeOfData];
+
     Wire.requestFrom(driverAddress, sizeOfData);   // request sizeOfData bytes from device
     while (Wire.available()) {    // slave may send less than requested
         buffer[i] = Wire.read();  // receive a byte
@@ -105,29 +107,18 @@ void receiveData()
     // assign 8bit motor status variables
     int16_t angle = buffer[0];
     angle = angle << 8 | buffer[1];
-    int16_t velocity = buffer[2];
-    velocity = velocity << 8 | buffer[3];
-    int16_t acceleration = buffer[4];
-    acceleration = acceleration << 8 | buffer[5];
-    int16_t current = buffer[6];
-    current = current << 8 | buffer[7];
-    motor.status.temperature = buffer[8];
-    motor.status.booleans = buffer[9];
+    motor.status.current = buffer[2]*10;
+    motor.status.temperature = buffer[3];
 
     // revert motor status data multipication to have the float number
     motor.status.angle = angle / 10.0;
-    motor.status.velocity = velocity / 100.0;
-    motor.status.acceleration = acceleration / 100.0;
-    motor.status.current = current;
 
     // read individual booleans from motor status boolean pack
-    bool rotatingCW = (motor.status.booleans) & 1;   // read the first bit
-    bool isAccelerating = (motor.status.booleans >> 1) & 1;   // read the second bit
+    // bool rotatingCW = (motor.status.booleans) & 1;   // read the first bit
+    // bool isAccelerating = (motor.status.booleans >> 1) & 1;   // read the second bit
 
     Serial.print(motor.status.angle);Serial.print('\t');
-    Serial.print(motor.status.velocity);Serial.print('\t');
     //Serial.print(motor.status.current);Serial.print('\t');
-    //Serial.print(setpointAngle);Serial.print('\t');    // print setpoint for comparison
     Serial.print('\n');
 }
 
@@ -135,22 +126,27 @@ void receiveData()
 void motionControl()
 {
     stepCounter += 1;
-    if (stepCounter < 200){
+    if (stepCounter < 150){
         Wire.beginTransmission(driverAddress);
-        Wire.write("G2 A120");          // set angle
+        Wire.write("G2A120");          // set angle
         Wire.endTransmission();
     }
-    else if (stepCounter >= 200 and stepCounter < 300){
+    else if (stepCounter >= 150 and stepCounter < 300){
         Wire.beginTransmission(driverAddress);
-        Wire.write("G2 A0");          // set angle
+        Wire.write("G2A0");          // set angle
         Wire.endTransmission();
     }
-    else if (stepCounter >= 300 and stepCounter <= 450){
+    else if (stepCounter >= 300 and stepCounter < 450){
         Wire.beginTransmission(driverAddress);
-        Wire.write("G2 A-120");         // set angle
+        Wire.write("G2A-120");         // set angle
         Wire.endTransmission();
     }
-    else if (stepCounter > 450){
+    else if (stepCounter >= 450 and stepCounter < 600){
+        Wire.beginTransmission(driverAddress);
+        Wire.write("G2A0");         // set angle
+        Wire.endTransmission();
+    }
+    else{
         stepCounter = 0;
     }
 }
