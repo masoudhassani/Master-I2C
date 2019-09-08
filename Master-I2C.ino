@@ -3,7 +3,10 @@
 #include <ThreadController.h>
 
 // define if the code is running in debug mode
-bool  debugMode = false;
+bool  manualDriverTest = false;
+bool  autoDriverTest = false;
+bool  debugMode = true;
+bool  showMotorData = true;
 
 // master and slave addresses
 const uint8_t numDrivers = 3;
@@ -42,7 +45,6 @@ dataPackage_t motor[numDrivers];
 
 // master serial command variables
 String incommingData = "";
-String command = "";
 int16_t setpointAngle;
 uint16_t stepCounter = 0;
 
@@ -64,18 +66,17 @@ void sendCommand()
             incommingData += c;
         }
         else{
-            command = incommingData;
-            Wire.beginTransmission(driverAddress[0]);    // transmit to device
-            Wire.write(command.c_str());              // sends a string
-            Wire.endTransmission();                  // stop transmitting
-            Serial.print("Echoing last command: ");Serial.print(command);Serial.print(" to slave 0x");Serial.println(driverAddress[0]);
+            // interpret the incomming command and send it to drivers
+            commandInterpreter(incommingData);
+
+            // empty the buffer
             incommingData = "";
         }
     }
 
     // for debug use only
     // read analog input from potentiometer and map it to an angle range and send it to motor driver
-    if (debugMode){
+    if (manualDriverTest){
         // read the analog in value
         int16_t joyStick = analogRead(analogInPin);
 
@@ -111,11 +112,13 @@ void receiveData()
 
     // show data in serial output
     }
-    for(int i=0; i<numDrivers; i++){
-        Serial.print(motor[i].status.angle);Serial.print('\t');
-        //Serial.print(motor[i].status.current);Serial.print('\t');
+    if (showMotorData){
+        for(int i=0; i<numDrivers; i++){
+            Serial.print(motor[i].status.angle);Serial.print('\t');
+            Serial.print(motor[i].status.current);Serial.print('\t');
+        }
+        Serial.print('\n');
     }
-    Serial.print('\n');
 }
 
 // function to send automatic commands to move the motor
@@ -158,46 +161,26 @@ void setup() {
     receiverThread.onRun(receiveData);
     receiverThread.setInterval(10);
 
-    motionThread.onRun(motionControl);
-    motionThread.setInterval(10);
-
-    // Adds both threads to the controller
+    // Adds threads to the controller
     multiThread.add(&commanderThread);
     multiThread.add(&receiverThread);
-    multiThread.add(&motionThread);
 
-    if (debugMode){
+    if (autoDriverTest){
+        motionThread.onRun(motionControl);
+        motionThread.setInterval(10);
+        multiThread.add(&motionThread);
+    }
+
+    if (manualDriverTest){
         pinMode(analogInPin, INPUT);
     }
+
+    Serial.println("Ready for commands");
+    Serial.println("Use the dogzy command format, e.g. MxxGy");
 }
 
 
 void loop()
 {
     multiThread.run();
-}
-
-// function to send through i2c
-uint8_t send(uint8_t addr, char * data)
-{
-    Wire.beginTransmission(addr);
-    Wire.write(data);
-    Wire.endTransmission();
-    return 1;
-}
-
-// function to receive through i2c
-// c++ does not allow the return of array. we sould use pointers
-byte * receive(uint8_t addr)
-{
-    uint8_t i = 0;
-    static byte buff[sizeOfData];
-
-    Wire.requestFrom(addr, sizeOfData);   // request sizeOfData bytes from device
-    while (Wire.available()) {            // slave may send less than requested
-        buff[i] = Wire.read();            // receive a byte
-        i += 1;
-    }
-
-    return buff;
 }
