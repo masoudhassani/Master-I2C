@@ -38,7 +38,7 @@ typedef union dataPackage_t
     byte dataPackage[sizeof(motorData_t)];
 };
 
-dataPackage_t motor;
+dataPackage_t motor[numDrivers];
 
 // master serial command variables
 String incommingData = "";
@@ -95,26 +95,26 @@ void sendCommand()
 // function to receive motor driver data
 void receiveData()
 {
+    for(int i=0; i<numDrivers; i++){
+        byte *buffer;
+        buffer = receive(driverAddress[i]);
 
-    byte *buffer;
-    buffer = receive(driverAddress[0]);
+        // recombine the separated 16bit data and assign it to corrent motor status variable
+        // assign 8bit motor status variables
+        int16_t angle = buffer[0];
+        angle = angle << 8 | buffer[1];
+        motor[i].status.current = buffer[2]*10;
+        motor[i].status.temperature = buffer[3];
 
-    // recombine the separated 16bit data and assign it to corrent motor status variable
-    // assign 8bit motor status variables
-    int16_t angle = buffer[0];
-    angle = angle << 8 | buffer[1];
-    motor.status.current = buffer[2]*10;
-    motor.status.temperature = buffer[3];
+        // revert motor status data multipication to have the float number
+        motor[i].status.angle = angle / 10.0;
 
-    // revert motor status data multipication to have the float number
-    motor.status.angle = angle / 10.0;
-
-    // read individual booleans from motor status boolean pack
-    // bool rotatingCW = (motor.status.booleans) & 1;   // read the first bit
-    // bool isAccelerating = (motor.status.booleans >> 1) & 1;   // read the second bit
-
-    Serial.print(motor.status.angle);Serial.print('\t');
-    //Serial.print(motor.status.current);Serial.print('\t');
+    // show data in serial output
+    }
+    for(int i=0; i<numDrivers; i++){
+        Serial.print(motor[i].status.angle);Serial.print('\t');
+        //Serial.print(motor[i].status.current);Serial.print('\t');
+    }
     Serial.print('\n');
 }
 
