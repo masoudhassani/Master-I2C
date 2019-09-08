@@ -6,8 +6,9 @@
 bool  debugMode = false;
 
 // master and slave addresses
-const int driverAddress = 0x01;
-const int masterAddress = 0x00;
+const uint8_t numDrivers = 3;
+const uint8_t driverAddress[numDrivers] = { 0x01, 0x02, 0x03 };
+const uint8_t masterAddress = 0x00;
 const int analogInPin   = A0;
 
 // i2c send/receive variables
@@ -64,10 +65,10 @@ void sendCommand()
         }
         else{
             command = incommingData;
-            Wire.beginTransmission(driverAddress);    // transmit to device
+            Wire.beginTransmission(driverAddress[0]);    // transmit to device
             Wire.write(command.c_str());              // sends a string
             Wire.endTransmission();                  // stop transmitting
-            Serial.print("Echoing last command: ");Serial.print(command);Serial.print(" to slave 0x");Serial.println(driverAddress);
+            Serial.print("Echoing last command: ");Serial.print(command);Serial.print(" to slave 0x");Serial.println(driverAddress[0]);
             incommingData = "";
         }
     }
@@ -85,7 +86,7 @@ void sendCommand()
         //Serial.print(setpointAngle);Serial.print('\t');
 
         char cstr[5];
-        Wire.beginTransmission(driverAddress);
+        Wire.beginTransmission(driverAddress[0]);
         Wire.write(itoa(setpointAngle, cstr, 10));
         Wire.endTransmission();
     }
@@ -94,14 +95,9 @@ void sendCommand()
 // function to receive motor driver data
 void receiveData()
 {
-    uint8_t i = 0;
-    byte buffer[sizeOfData];
 
-    Wire.requestFrom(driverAddress, sizeOfData);   // request sizeOfData bytes from device
-    while (Wire.available()) {    // slave may send less than requested
-        buffer[i] = Wire.read();  // receive a byte
-        i += 1;
-    }
+    byte *buffer;
+    buffer = receive(driverAddress[0]);
 
     // recombine the separated 16bit data and assign it to corrent motor status variable
     // assign 8bit motor status variables
@@ -127,24 +123,24 @@ void motionControl()
 {
     stepCounter += 1;
     if (stepCounter < 150){
-        Wire.beginTransmission(driverAddress);
-        Wire.write("G2A120");          // set angle
-        Wire.endTransmission();
+        for(int i=0; i<numDrivers; i++){
+            uint8_t flag = send(driverAddress[i], "G2A120");
+        }
     }
     else if (stepCounter >= 150 and stepCounter < 300){
-        Wire.beginTransmission(driverAddress);
-        Wire.write("G2A0");          // set angle
-        Wire.endTransmission();
+        for(int i=0; i<numDrivers; i++){
+            uint8_t flag = send(driverAddress[i], "G2A0");
+        }
     }
     else if (stepCounter >= 300 and stepCounter < 450){
-        Wire.beginTransmission(driverAddress);
-        Wire.write("G2A-120");         // set angle
-        Wire.endTransmission();
+        for(int i=0; i<numDrivers; i++){
+            uint8_t flag = send(driverAddress[i], "G2A-120");
+        }
     }
     else if (stepCounter >= 450 and stepCounter < 600){
-        Wire.beginTransmission(driverAddress);
-        Wire.write("G2A0");         // set angle
-        Wire.endTransmission();
+        for(int i=0; i<numDrivers; i++){
+            uint8_t flag = send(driverAddress[i], "G2A0");
+        }
     }
     else{
         stepCounter = 0;
@@ -179,4 +175,29 @@ void setup() {
 void loop()
 {
     multiThread.run();
+}
+
+// function to send through i2c
+uint8_t send(uint8_t addr, char * data)
+{
+    Wire.beginTransmission(addr);
+    Wire.write(data);
+    Wire.endTransmission();
+    return 1;
+}
+
+// function to receive through i2c
+// c++ does not allow the return of array. we sould use pointers
+byte * receive(uint8_t addr)
+{
+    uint8_t i = 0;
+    static byte buff[sizeOfData];
+
+    Wire.requestFrom(addr, sizeOfData);   // request sizeOfData bytes from device
+    while (Wire.available()) {            // slave may send less than requested
+        buff[i] = Wire.read();            // receive a byte
+        i += 1;
+    }
+
+    return buff;
 }
