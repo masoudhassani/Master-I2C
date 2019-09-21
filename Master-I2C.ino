@@ -48,11 +48,11 @@ dataPackage_t motor[numDrivers];
 // current values assume a spherical foot but givez wrong height
 float    L3 = 0.0;           // hip link length mm
 float    L2 = 100.0;         // upper leg length mm
-float    L1 = 140.0;         // lower leg length mm
-float    X_OFFSET = 00.0;    // off set of foot contact point with ground with respect to hip joint
+float    L1 = 155.0;         // lower leg length mm
+float    X_OFFSET = -47.0;   // off set of foot contact point with ground with respect to hip joint
 float    BODY_LENGTH = 298;  // length of the body from the front hip joint to the rear
 float    BODY_WIDTH = 130;   // width of the body from left to right hip joint
-float    Z0 = 200.0;         // initial height, based on neutral pos, 35 deg
+float    Z0 = 220.0;         // initial height, based on neutral pos, 35 deg
 float    legLength[3] = {L1, L2, L3};
 
 // corner positions of the robot main body considering the CG as 0,0,0
@@ -69,7 +69,7 @@ float     bodyAngleMin[3] = {-15.0, -15.0, -15.0};    // roll (phi), pitch (thet
 float     bodyAngleMax[3] = { 15.0 , 15.0 , 15.0};    // roll (phi), pitch (theta), yaw (psi)
 
 // initial configuration of a leg in terms of joint angle
-float    jointNeutral[3] = {0.0, -30, 60};    // neutral joint angle of each leg
+float    jointNeutral[3] = {-57.6, 47.6, 0.0};    // neutral joint angle of each leg
 
 // create leg instances
 Leg leg[4] = {Leg("Rear Right", cornerA, legLength, X_OFFSET, Z0, jointNeutral),
@@ -223,9 +223,9 @@ void setup() {
     // assuming all joint angles are zero in the beginning
     // in the future a homing algorithm will make sure this assumption is correct
     for(int8_t i=0; i<4; ++i){
-        leg[i].jointAngle[0] = 0.0;
-        leg[i].jointAngle[1] = 0.0;
-        leg[i].jointAngle[2] = 0.0;
+        leg[i].jointAngle[0] = jointNeutral[0];
+        leg[i].jointAngle[1] = jointNeutral[1];
+        leg[i].jointAngle[2] = jointNeutral[2];
     }
 
 }

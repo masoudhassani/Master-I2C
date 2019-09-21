@@ -21,3 +21,14 @@ void moveLeg(uint8_t legNumber)
         send(driverAddress[i], command);
     }
 }
+
+float getTrajectory(int t, int pInit, int pFinal, int period){
+    // t        --> current time (msec)
+    // pInit    --> initial position
+    // pfinal   --> final position
+    // period   --> the period that takes to move from initial to final position (msec)
+    // compute the stepper speed with a minimum accel trajectory
+    float desiredPosition = 2*(pInit-pFinal)*pow(t,3)/(pow(period,3)) - 3*(pInit-pFinal)*pow(t,2)/(pow(period,2)) + pInit;
+    //computedPosition = min(max(computedPosition,pInit),pFinal);
+    return desiredPosition;
+}
