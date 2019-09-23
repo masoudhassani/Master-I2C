@@ -9,7 +9,6 @@ void neutral(){
         leg[i].dy = 0.0;
         leg[i].dz = 0.0;
         leg[i].bodyRotToJointAngle(bodyAngle);
-        moveLeg(i);
     }
 }
 

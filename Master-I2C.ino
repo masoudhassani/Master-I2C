@@ -7,12 +7,16 @@
 // define if the code is running in debug mode
 bool  manualDriverTest = false;
 bool  autoDriverTest = false;
-bool  debugMode = true;
+bool  debugMode = false;
 bool  showMotorData = true;
 
 // ----------------------- i2c serial communication config --------------------
-const uint8_t numDrivers = 3;
-const uint8_t driverAddress[numDrivers] = { 0x01, 0x02, 0x03 };
+const uint8_t numJoints = 3;
+const uint8_t numlegs = 4;
+const uint8_t driverAddress[numJoints*numlegs] = { 0x01, 0x02, 0x03,
+                                                   0x04, 0x05, 0x06,
+                                                   0x07, 0x08, 0x09,
+                                                   0x10, 0x11, 0x12};
 const uint8_t masterAddress = 0x00;
 const uint8_t sizeOfData = 4;    // expected data size from slave in number of bytes. this might change
 
@@ -40,7 +44,7 @@ typedef union dataPackage_t
     byte dataPackage[sizeof(motorData_t)];
 };
 
-dataPackage_t motor[numDrivers];
+dataPackage_t motor[numJoints];
 
 // ----------------------- robot geometry and definitions ---------------------
 // leg foot needs to be redesigned. commented values are original
@@ -72,10 +76,14 @@ float     bodyAngleMax[3] = { 15.0 , 15.0 , 15.0};    // roll (phi), pitch (thet
 float    jointNeutral[3] = {-57.6, 47.6, 0.0};    // neutral joint angle of each leg
 
 // create leg instances
-Leg leg[4] = {Leg("Rear Right", cornerA, legLength, X_OFFSET, Z0, jointNeutral),
-    Leg("Rear Left", cornerB, legLength, X_OFFSET, Z0, jointNeutral),
-    Leg("Front Right", cornerC, legLength, X_OFFSET, Z0, jointNeutral),
-    Leg("Front Left", cornerD, legLength, X_OFFSET, Z0, jointNeutral)
+uint8_t addr0[3] = {driverAddress[0],driverAddress[1],driverAddress[2]};
+uint8_t addr1[3] = {driverAddress[3],driverAddress[4],driverAddress[5]};
+uint8_t addr2[3] = {driverAddress[6],driverAddress[7],driverAddress[8]};
+uint8_t addr3[3] = {driverAddress[9],driverAddress[10],driverAddress[11]};
+Leg leg[4] = {Leg("Rear Right", cornerA, legLength, X_OFFSET, Z0, jointNeutral, addr0),
+    Leg("Rear Left", cornerB, legLength, X_OFFSET, Z0, jointNeutral, addr1),
+    Leg("Front Right", cornerC, legLength, X_OFFSET, Z0, jointNeutral, addr2),
+    Leg("Front Left", cornerD, legLength, X_OFFSET, Z0, jointNeutral, addr3)
 };
 
 // ----------------------- some decrelations ---------------------
@@ -133,7 +141,7 @@ void sendCommand()
 // function to receive motor driver data
 void receiveData()
 {
-    for(int i=0; i<numDrivers; i++){
+    for(int i=0; i<numJoints; i++){
         byte *buffer;
         buffer = receive(driverAddress[i]);
 
@@ -150,7 +158,7 @@ void receiveData()
     // show data in serial output
     }
     if (showMotorData){
-        for(int i=0; i<numDrivers; i++){
+        for(int i=0; i<numJoints; i++){
             Serial.print(motor[i].status.angle);Serial.print('\t');
             Serial.print(motor[i].status.current);Serial.print('\t');
         }
@@ -168,22 +176,22 @@ void motionControl()
 {
     stepCounter += 1;
     if (stepCounter < 150){
-        for(int i=0; i<numDrivers; i++){
+        for(int i=0; i<numJoints; i++){
             uint8_t flag = send(driverAddress[i], "G2A120");
         }
     }
     else if (stepCounter >= 150 and stepCounter < 300){
-        for(int i=0; i<numDrivers; i++){
+        for(int i=0; i<numJoints; i++){
             uint8_t flag = send(driverAddress[i], "G2A0");
         }
     }
     else if (stepCounter >= 300 and stepCounter < 450){
-        for(int i=0; i<numDrivers; i++){
+        for(int i=0; i<numJoints; i++){
             uint8_t flag = send(driverAddress[i], "G2A-120");
         }
     }
     else if (stepCounter >= 450 and stepCounter < 600){
-        for(int i=0; i<numDrivers; i++){
+        for(int i=0; i<numJoints; i++){
             uint8_t flag = send(driverAddress[i], "G2A0");
         }
     }
@@ -193,8 +201,8 @@ void motionControl()
 }
 
 void setup() {
-    Wire.begin(0x00);        // join i2c bus
-    Serial.begin(230400);    // setup serial for debug
+    Wire.begin(masterAddress);        // join i2c bus
+    Serial.begin(230400);             // setup serial for debug
 
     // setup threads
     commanderThread.onRun(sendCommand);

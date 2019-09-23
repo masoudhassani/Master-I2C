@@ -64,16 +64,16 @@ void commandInterpreter(String strCommand)
         uint8_t command = strCommand.substring(1,intLength+1).toInt();
 
         switch (command) {
-            case 00:
+            case 99:
                 neutral();
                 break;
-            case 99:
-                for(int i=0; i<numDrivers; i++){
+            case 00:
+                for(int i=0; i<numJoints; i++){
                     uint8_t flag = send(driverAddress[i], "G2A0");
                 }
                 break;
             case 88:
-                for(int i=0; i<numDrivers; i++){
+                for(int i=0; i<numJoints; i++){
                     uint8_t flag = send(driverAddress[i], "G2A20");
                 }
                 break;
@@ -84,7 +84,7 @@ void commandInterpreter(String strCommand)
     // command is in form of Lx[leg command]:
     // LxX100: moved the xth leg's tip 100mm in X direction
     // LxY100: moved the xth leg's tip 100mm in Y direction
-    // LxZ100: moved the xth leg's tip 100mm in Z direction 
+    // LxZ100: moved the xth leg's tip 100mm in Z direction
     else if(strCommand.charAt(0)=='L' || strCommand.charAt(0)=='l'){
         // read the integer after the command definition. 1 digit int is expected
         uint8_t legNumber = strCommand.substring(1,2).toInt();
@@ -106,10 +106,10 @@ void commandInterpreter(String strCommand)
         }
 
         // update the joint angles of the requested leg
-        leg[legNumber].coordinateToJointAngle();
+        leg[legNumber].coordinateToJointAngle(leg[legNumber].position);
 
         // move the requested leg
-        moveLeg(legNumber);
+        //moveLeg(legNumber);
 
         // print received command if debug mode
         if (debugMode){

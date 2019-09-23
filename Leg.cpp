@@ -5,35 +5,7 @@
 
 #include "Arduino.h"
 #include "Leg.h"
-
-Leg::Leg(String legName, float corner[3], float length[3], float x_offset, float height, float neutral[3])
-{
-    // initial corner positions of body which are initial leg root position
-    cX = corner[0];
-    cY = corner[1];
-    cZ = corner[2];
-
-    // initialize the leg geometry
-    L1 = length[0];
-    L2 = length[1];
-    L3 = length[2];
-    xOffset = x_offset;
-    Z0 = height;
-
-    // leg foot/ground interface (leg tip) position with respect to its root
-    position[0] = corner[0];
-    position[1] = corner[1];
-    position[2] = corner[2];
-    name        = legName;
-    jointNeutral[0] = neutral[0];
-    jointNeutral[1] = neutral[1];
-    jointNeutral[2] = neutral[2];
-
-    // initial offset (this is used to move the leg tip using serial commands)
-    dx = 0.0;   // movement in mm in x direction
-    dy = 0.0;   // movement in mm in y direction
-    dz = 0.0;   // movement in mm in z direction
-}
+#include "Motor.h"
 
 /*
 function to calculate the leg tip position based on
@@ -62,22 +34,22 @@ void Leg::bodyRotToJointAngle(float th[3])
     position[1] = L3 - (position[1] - cY) + dy;    // y is to right in the leg coordinate
     position[2] = Z0 + (position[2] - cZ) + dz;    // z is downward in the leg coordinate
 
-    Leg::coordinateToJointAngle();
+    Leg::coordinateToJointAngle(position);
 }
 
 /*
 function to calculate three joint angle of each leg from leg tip position
 this function is called from bodyRotToJointAngle or can be called individually
 */
-void Leg::coordinateToJointAngle()
+void Leg::coordinateToJointAngle(float p[3])
 {
     float theta[3];    // calculated joint angles in rad
 
     // inverse kinematics calculation
     //theta[2] = 2.0*atan((position[2]-sqrt(position[2]*position[2] + position[1]*position[1] - L3*L3)) / (L3 + position[1]));
-    theta[2] = atan(position[1]/position[2]);  //t3
-    float r1 = position[2] - L3 * sin(theta[2]);
-    float r2 = position[0];
+    theta[2] = atan(p[1]/p[2]);  //t3
+    float r1 = p[2] - L3 * sin(theta[2]);
+    float r2 = p[0];
     float r3 = sqrt(r1*r1 + r2*r2);
     float psi2 = atan(r2 / r1);
     float phi2 = acos((L1*L1 - L2*L2 - r3*r3)/(-2*L2*r3));
@@ -90,4 +62,14 @@ void Leg::coordinateToJointAngle()
     jointAngle[2] = theta[2]*57.2958;
     jointAngle[1] = -1.0 * theta[1]*57.2958;
     jointAngle[0] = -1.0 * theta[0]*57.2958;
+
+    // actuate all joints
+    Leg::moveLeg();
+}
+
+void Leg::moveLeg()
+{
+    for(int i=0; i<3; i++){
+        joint[i].move(jointAngle[i]);
+    }
 }
