@@ -67,11 +67,11 @@ void commandInterpreter(String strCommand)
             case 99:
                 neutral();
                 break;
+
             case 00:
-                for(int i=0; i<numJoints; i++){
-                    uint8_t flag = send(driverAddress[i], "G2A0");
-                }
+                zero();
                 break;
+
             case 88:
                 for(int i=0; i<numJoints; i++){
                     uint8_t flag = send(driverAddress[i], "G2A20");
@@ -93,20 +93,23 @@ void commandInterpreter(String strCommand)
         legCommand =  strCommand.substring(2,cmdLength);
         ind = legCommand.length();
 
+        // create a list to hold requested leg position
+        float p[3] = {leg[legNumber].position[0], leg[legNumber].position[1], leg[legNumber].position[2]};
+
         if (legCommand.charAt(0)=='X' || legCommand.charAt(0)=='x'){
-            leg[legNumber].position[0] = legCommand.substring(1,ind).toFloat();
+            p[0] = legCommand.substring(1,ind).toFloat();
         }
 
         else if (legCommand.charAt(0)=='Y' || legCommand.charAt(0)=='y'){
-            leg[legNumber].position[1] = legCommand.substring(1,ind).toFloat();
+            p[1] = legCommand.substring(1,ind).toFloat();
         }
 
         else if (legCommand.charAt(0)=='Z' || legCommand.charAt(0)=='z'){
-            leg[legNumber].position[2] = legCommand.substring(1,ind).toFloat();
+            p[2] = legCommand.substring(1,ind).toFloat();
         }
 
         // update the joint angles of the requested leg
-        leg[legNumber].coordinateToJointAngle(leg[legNumber].position);
+        leg[legNumber].coordinateToJointAngle(p);
 
         // move the requested leg
         //moveLeg(legNumber);

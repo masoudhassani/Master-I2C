@@ -27,7 +27,7 @@ void Motor::update()
 
     // recombine the separated 16bit data and assign it to corrent motor status variable
     // assign 8bit motor status variables
-    uint16_t angleBuffer = buffer[0];
+    int16_t angleBuffer = buffer[0];
     angleBuffer = angleBuffer << 8 | buffer[1];
     angle = angleBuffer / 10.0;
     current = buffer[2]*10;

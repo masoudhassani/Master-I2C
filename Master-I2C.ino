@@ -7,13 +7,13 @@
 // define if the code is running in debug mode
 bool  manualDriverTest = false;
 bool  autoDriverTest = false;
-bool  debugMode = false;
+bool  debugMode = true;
 bool  showMotorData = true;
 
 // ----------------------- i2c serial communication config --------------------
 const uint8_t numJoints = 3;
-const uint8_t numlegs = 4;
-const uint8_t driverAddress[numJoints*numlegs] = { 0x01, 0x02, 0x03,
+const uint8_t numLegs = 4;
+const uint8_t driverAddress[numJoints*numLegs] = { 0x01, 0x02, 0x03,
                                                    0x04, 0x05, 0x06,
                                                    0x07, 0x08, 0x09,
                                                    0x10, 0x11, 0x12};
@@ -53,7 +53,7 @@ dataPackage_t motor[numJoints];
 float    L3 = 0.0;           // hip link length mm
 float    L2 = 100.0;         // upper leg length mm
 float    L1 = 155.0;         // lower leg length mm
-float    X_OFFSET = -47.0;   // off set of foot contact point with ground with respect to hip joint
+float    X_OFFSET = 0.0;//-47.0;   // off set of foot contact point with ground with respect to hip joint
 float    BODY_LENGTH = 298;  // length of the body from the front hip joint to the rear
 float    BODY_WIDTH = 130;   // width of the body from left to right hip joint
 float    Z0 = 220.0;         // initial height, based on neutral pos, 35 deg
@@ -141,29 +141,33 @@ void sendCommand()
 // function to receive motor driver data
 void receiveData()
 {
-    for(int i=0; i<numJoints; i++){
-        byte *buffer;
-        buffer = receive(driverAddress[i]);
-
-        // recombine the separated 16bit data and assign it to corrent motor status variable
-        // assign 8bit motor status variables
-        int16_t angle = buffer[0];
-        angle = angle << 8 | buffer[1];
-        motor[i].status.current = buffer[2]*10;
-        motor[i].status.temperature = buffer[3];
-
-        // revert motor status data multipication to have the float number
-        motor[i].status.angle = angle / 10.0;
-
-    // show data in serial output
+    for(int i=0; i<numLegs; i++){
+        leg[i].update();
     }
-    if (showMotorData){
-        for(int i=0; i<numJoints; i++){
-            Serial.print(motor[i].status.angle);Serial.print('\t');
-            Serial.print(motor[i].status.current);Serial.print('\t');
-        }
-        Serial.print('\n');
-    }
+
+    // for(int i=0; i<numJoints; i++){
+    //     byte *buffer;
+    //     buffer = receive(driverAddress[i]);
+    //
+    //     // recombine the separated 16bit data and assign it to corrent motor status variable
+    //     // assign 8bit motor status variables
+    //     int16_t angle = buffer[0];
+    //     angle = angle << 8 | buffer[1];
+    //     motor[i].status.current = buffer[2]*10;
+    //     motor[i].status.temperature = buffer[3];
+    //
+    //     // revert motor status data multipication to have the float number
+    //     motor[i].status.angle = angle / 10.0;
+    //
+    // // show data in serial output
+    // }
+    // if (showMotorData){
+    //     for(int i=0; i<numJoints; i++){
+    //         Serial.print(motor[i].status.angle);Serial.print('\t');
+    //         //Serial.print(motor[i].status.current);Serial.print('\t');
+    //     }
+    //     Serial.print('\n');
+    // }
     if (debugMode){
         Serial.print("X: ");Serial.print(leg[0].position[0]);Serial.print('\t');
         Serial.print("Y: ");Serial.print(leg[0].position[1]);Serial.print('\t');

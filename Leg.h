@@ -63,6 +63,8 @@ public:
 
     void bodyRotToJointAngle(float th[3]);
     void coordinateToJointAngle(float p[3]);
+    void jointAngleToCoordinate(float th[3]);
+    void update();
     float position[3];
     float jointAngle[3];
     float jointNeutral[3];
