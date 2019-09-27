@@ -6,6 +6,7 @@
 #include "Arduino.h"
 #include "Leg.h"
 #include "Motor.h"
+#include "SmoothTrajectory.h"
 
 /*
 function to calculate the leg tip position based on
@@ -37,8 +38,10 @@ void Leg::bodyRotToJointAngle(float th[3])
     p[1] = L3 - (p[1] - cY) + dy;    // y is to right in the leg coordinate
     p[2] = Z0 + (p[2] - cZ) + dz;    // z is downward in the leg coordinate
 
-    // send out the desired position to another function to actuate the motors
-    Leg::coordinateToJointAngle(p);
+    // set the desired position to actuate the motors
+    for(int i=0; i<3; i++){
+        waypoint[i] = p[i];
+    }
 }
 
 /*
@@ -95,8 +98,8 @@ void Leg::moveLeg()
     }
 }
 
-// update the motor data and leg position
-void Leg::update()
+// update the motor data and leg position from current joint angle
+void Leg::readJointData()
 {
     float th[3] = {-1.0*joint[0].angle, -1.0*joint[1].angle, joint[2].angle};
 
@@ -104,9 +107,35 @@ void Leg::update()
         joint[i].update();
     }
 
-    Serial.print(th[0]); Serial.print('\t');
-    Serial.print(th[1]); Serial.print('\t');
-    Serial.println(th[2]);
+    // Serial.print(th[0]); Serial.print('\t');
+    // Serial.print(th[1]); Serial.print('\t');
+    // Serial.println(th[2]);
 
     Leg::jointAngleToCoordinate(th);
+}
+
+// a function which is called every step to check for required motion in the leg
+void Leg::update()
+{
+    // initialize an array to hold calculated positions of smooth trajectories
+    float p[3] = {position[0], position[1], position[2]};
+
+    // check if any motion has been requested for any direction X, Y, Z
+    for(int i=0; i<3; i++){
+        // if the requested waypoint has been changed in this step
+        if (waypoint[i] != waypointPrev[i]){
+            trajectory[i].reset(position[i], waypoint[i], speed[i], waypointSpeed[i], 400);
+            trajectory[i].isMoving = true;
+        }
+
+        // if a trajectory in a direction is generated
+        if (trajectory[i].isMoving){
+            p[i] = trajectory[i].getPosition(0);
+        }
+
+        // update previous waypoint request
+        waypointPrev[i] = waypoint[i];
+    }
+    // force motors to move to proper position
+    Leg::coordinateToJointAngle(p);
 }

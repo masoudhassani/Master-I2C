@@ -15,12 +15,11 @@ void neutral(){
 // return all joints to their zero position
 void zero(){
     Serial.println("Zero Position ...");
+    float p[3] = {X_OFFSET, 0.0, L1+L2-2};
     for(int8_t i=0; i<4; ++i){
-        float p[3] = {X_OFFSET, 0.0, L1+L2};
-        leg[i].coordinateToJointAngle(p);
-        // leg[i].position = {X_OFFSET, 0.0, L1+L2};
-        // leg[i].jointAngle = {0.0, 0.0, 0.0};
-        // leg[i].moveLeg();
+        for(int j=0; j<3; j++){
+            leg[i].waypoint[j] = p[j];
+        }
     }
 }
 
@@ -31,15 +30,4 @@ void moveLeg(uint8_t legNumber)
         uint8_t n = sprintf(command, "G2A%f", leg[legNumber].jointAngle[i]);
         send(driverAddress[i], command);
     }
-}
-
-float getTrajectory(int t, int pInit, int pFinal, int period){
-    // t        --> current time (msec)
-    // pInit    --> initial position
-    // pfinal   --> final position
-    // period   --> the period that takes to move from initial to final position (msec)
-    // compute the stepper speed with a minimum accel trajectory
-    float desiredPosition = 2*(pInit-pFinal)*pow(t,3)/(pow(period,3)) - 3*(pInit-pFinal)*pow(t,2)/(pow(period,2)) + pInit;
-    //computedPosition = min(max(computedPosition,pInit),pFinal);
-    return desiredPosition;
 }

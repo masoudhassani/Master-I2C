@@ -7,6 +7,8 @@
 
 #include "Arduino.h"
 #include "Motor.h"
+#include "SmoothTrajectory.h"
+
 class Leg
 {
 private:
@@ -21,10 +23,10 @@ private:
     float Z0;
     uint8_t address[3];
     Motor joint[3];
+    SmoothTrajectory trajectory[3];   // smooth trajectory for x, y, z directions
 
 public:
     Leg(String legName, float corner[3], float length[3], float x_offset, float height, float neutral[3], uint8_t addr[3])
-
     {
         address[0] = addr[0]; address[1] = addr[1]; address[2] = addr[2];
 
@@ -40,10 +42,15 @@ public:
         xOffset = x_offset;
         Z0 = height;
 
+        // initializing position and speed of the leg in X, Y and Z direction
         // leg foot/ground interface (leg tip) position with respect to its root
-        position[0] = corner[0];
-        position[1] = corner[1];
-        position[2] = corner[2];
+        for(int i=0; i<3; i++){
+            position[i] = corner[i];   // current position
+            waypoint[i] = position[i];
+            waypointPrev[i] = position[i];
+            waypointSpeed[i] = 0.0;
+            speed[i] = 0.0;         // current speed
+        }
 
         name = legName;
         jointNeutral[0] = neutral[0];
@@ -64,10 +71,15 @@ public:
     void bodyRotToJointAngle(float th[3]);
     void coordinateToJointAngle(float p[3]);
     void jointAngleToCoordinate(float th[3]);
+    void readJointData();
     void update();
     float position[3];
     float jointAngle[3];
     float jointNeutral[3];
+    float waypoint[3];
+    float waypointPrev[3];
+    float waypointSpeed[3];
+    float speed[3];
     String name;
     float dx;
     float dy;
