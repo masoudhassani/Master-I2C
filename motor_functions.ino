@@ -31,3 +31,32 @@ void moveLeg(uint8_t legNumber)
         send(driverAddress[i], command);
     }
 }
+
+// function to send automatic commands to move the motor
+void autoTest()
+{
+    stepCounter += 1;
+    if (stepCounter < 150){
+        for(int i=0; i<numJoints; i++){
+            uint8_t flag = send(driverAddress[i], "G2A120");
+        }
+    }
+    else if (stepCounter >= 150 and stepCounter < 300){
+        for(int i=0; i<numJoints; i++){
+            uint8_t flag = send(driverAddress[i], "G2A0");
+        }
+    }
+    else if (stepCounter >= 300 and stepCounter < 450){
+        for(int i=0; i<numJoints; i++){
+            uint8_t flag = send(driverAddress[i], "G2A-120");
+        }
+    }
+    else if (stepCounter >= 450 and stepCounter < 600){
+        for(int i=0; i<numJoints; i++){
+            uint8_t flag = send(driverAddress[i], "G2A0");
+        }
+    }
+    else{
+        stepCounter = 0;
+    }
+}

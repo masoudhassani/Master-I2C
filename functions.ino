@@ -113,7 +113,7 @@ void commandInterpreter(String strCommand)
         for(int i=0; i<3; i++){
             leg[legNumber].waypoint[i] = p[i];
         }
-        
+
         // move the requested leg
         //moveLeg(legNumber);
 
@@ -130,4 +130,9 @@ void commandInterpreter(String strCommand)
             Serial.println("Command could not be interpreted!");
         }
     }
+}
+
+float clampFloat(float input, float minInput, float maxInput)
+{
+    return min(max(input, minInput), maxInput);
 }

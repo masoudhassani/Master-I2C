@@ -72,12 +72,12 @@ void Leg::coordinateToJointAngle(float p[3])
         jointAngle[0] = -1.0 * theta[0]*57.2958;
 
         // actuate all joints
-        Leg::moveLeg();
+        //Leg::moveLeg();
 
         // update current position, this might be unnecessary
-        position[0] = p[0];
-        position[1] = p[1];
-        position[2] = p[2];
+        // position[0] = p[0];
+        // position[1] = p[1];
+        // position[2] = p[2];
     }
 }
 
@@ -111,6 +111,7 @@ void Leg::readJointData()
     // Serial.print(th[1]); Serial.print('\t');
     // Serial.println(th[2]);
 
+    // update current leg position
     Leg::jointAngleToCoordinate(th);
 }
 
@@ -120,22 +121,119 @@ void Leg::update()
     // initialize an array to hold calculated positions of smooth trajectories
     float p[3] = {position[0], position[1], position[2]};
 
+    // distance of final position to current position
+    float dis[3] = {0.0, 0.0, 0.0};
+
+    // save the current joint angle in an array
+    float currentJointAngle[3] = {-1.0*joint[0].angle, -1.0*joint[1].angle, joint[2].angle};
+
+    // a boolean shows if new waypoint has arrived
+    bool waypointChanged = false;
+
     // check if any motion has been requested for any direction X, Y, Z
     for(int i=0; i<3; i++){
         // if the requested waypoint has been changed in this step
         if (waypoint[i] != waypointPrev[i]){
-            trajectory[i].reset(position[i], waypoint[i], speed[i], waypointSpeed[i], 400);
-            trajectory[i].isMoving = true;
+            // calculate the distance in i-direction from waypoint to current
+            dis[i] = (waypoint[i] - position[i]);
+
+            // waypoint has changed
+            waypointChanged = true;
+        }
+        else{
+            dis[i] = 0.0;
+        }
+    }
+
+    // calculate the final requested position and create a trajectory
+    if (waypointChanged){
+        // max joint travel between all joints
+        maxJointTravel = 0.0;
+
+        // initialize the array to hold the required travel of each motor
+        // initialize the array to hold the speed scale of each joint
+        for(int i=0; i<3; i++){
+            requiredTravel[i] = 0.0;
+            jointSpeedScale[i] = 0.0;
         }
 
-        // if a trajectory in a direction is generated
-        if (trajectory[i].isMoving){
-            p[i] = trajectory[i].getPosition(0);
+        // initialize the max trajectory speed and trajectory speed
+        maxTrajectorySpeed = 0.0;
+        trajectorySpeed = 0.0;
+
+
+        // calculate the distance between final and current leg tip
+        float desiredDistance = findDistanceFromCurrent(dis);
+
+        // estimate the required period needed to go from current to waypoint
+        float period = (desiredDistance / maxLegSpeed) * 1.5 * 1000;  // in milliseconds
+
+        // create a trajectory
+        // if requested waypoint is valid
+        if (Leg::checkLimits()){
+            maxTrajectorySpeed = trajectory.reset(0, desiredDistance, speed, waypointSpeed, period, 0);
+            trajectory.isMoving = true;
+
+            // calculate the required joint angle for reaching the waypoint
+            Leg::coordinateToJointAngle(waypoint);
+
+            // calculate the distance each joint should travel for leg to reach the waypoint
+            // calculate the maximum travel
+            for(int i=0; i<3; i++){
+                requiredTravel[i] = abs(currentJointAngle[i] - jointAngle[i]);
+                if (requiredTravel[i] > maxJointTravel){
+                    maxJointTravel = requiredTravel[i];
+                }
+            }
         }
 
-        // update previous waypoint request
+        // if waypoint is not valid and reachable
+        else{
+            trajectory.isMoving = false;
+        }
+    }
+
+
+    // if a trajectory in a direction is generated, get the next speed scale of the trajectory
+    if (trajectory.isMoving){
+        trajectorySpeed = trajectory.getSpeed();
+
+        // calculate the speed scale of each joint and clamp it
+        for(int i=0; i<3; i++){
+            jointSpeedScale[i] = (requiredTravel[i] / maxJointTravel);// * (trajectorySpeed / maxTrajectorySpeed);
+            jointSpeedScale[i] = min(max(jointSpeedScale[i], minJointScalePWM[i]), maxJointScalePWM[i]);
+            joint[i].setSpeed(jointSpeedScale[i]);
+        }
+
+        // move the leg to calculated joint angles angle with a one-time command
+        if (waypointChanged){
+            Leg::moveLeg();
+        }
+    }
+
+    // update previous waypoint
+    for(int i=0; i<3; i++){
         waypointPrev[i] = waypoint[i];
     }
-    // force motors to move to proper position
-    Leg::coordinateToJointAngle(p);
+}
+
+// check if requested waypoint is reachable
+bool Leg::checkLimits()
+{
+    float reach = pow((waypoint[0]*waypoint[0] + waypoint[1]*waypoint[1] + waypoint[2]*waypoint[2]), 0.5);
+    // maximum reach of the robot should be smaller than L1+L2 to be valid
+    if (reach < L1+L2){
+        // check if the requested position in y-dir is smaller than 60mm
+        if (abs(waypoint[1]) < 60){
+            return true;
+        }
+    }
+    else{
+        return false;
+    }
+}
+
+float Leg::findDistanceFromCurrent(float p[3])
+{
+    return pow((p[0]*p[0] + p[1]*p[1] + p[2]*p[2]), 0.5);
 }

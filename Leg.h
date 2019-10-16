@@ -23,7 +23,7 @@ private:
     float Z0;
     uint8_t address[3];
     Motor joint[3];
-    SmoothTrajectory trajectory[3];   // smooth trajectory for x, y, z directions
+    SmoothTrajectory trajectory;   // smooth trajectory instance
 
 public:
     Leg(String legName, float corner[3], float length[3], float x_offset, float height, float neutral[3], uint8_t addr[3])
@@ -48,9 +48,10 @@ public:
             position[i] = corner[i];   // current position
             waypoint[i] = position[i];
             waypointPrev[i] = position[i];
-            waypointSpeed[i] = 0.0;
-            speed[i] = 0.0;         // current speed
         }
+        // waypoint and current speeds are defined in local coordinate aligned with the direction of movement
+        waypointSpeed = 0.0;
+        speed = 0.0;         // current speed
 
         name = legName;
         jointNeutral[0] = neutral[0];
@@ -66,24 +67,49 @@ public:
         for(int i=0; i<3; i++){
             joint[i].setAddress(address[i]);
         }
+
+        // max speed of leg tip in the direction of movement
+        maxLegSpeed = 30;    // mm/s tunable
+
+        for(int i=0; i<3; i++){
+            minJointScalePWM[i] = 0.7;
+            if (i==0){
+                minJointScalePWM[i] = 0.7;
+            }
+            maxJointScalePWM[i] = 1.0;
+            requiredTravel[i] = 0.0;   // required travel for each joint
+            jointSpeedScale[i] = 0.0;  // joint speed scale for pwm
+        }
+
+        //maxJointTravel = 0.0;
     }
 
-    void bodyRotToJointAngle(float th[3]);
-    void coordinateToJointAngle(float p[3]);
-    void jointAngleToCoordinate(float th[3]);
-    void readJointData();
-    void update();
+    bool  checkLimits();
+    float findDistanceFromCurrent(float p[3]);
+    void  bodyRotToJointAngle(float th[3]);
+    void  coordinateToJointAngle(float p[3]);
+    void  jointAngleToCoordinate(float th[3]);
+    void  readJointData();
+    void  update();
     float position[3];
     float jointAngle[3];
     float jointNeutral[3];
     float waypoint[3];
     float waypointPrev[3];
-    float waypointSpeed[3];
-    float speed[3];
+    float waypointSpeed;
+    float speed;
     String name;
     float dx;
     float dy;
     float dz;
+    float maxLegSpeed;          // this is the max linear speed of leg tip along with the direction of motion (tunable)
+    float minJointScalePWM[3];  // minimum pwm scale for each joint to account for friction
+    float maxJointScalePWM[3];  // minimum pwm scale for each joint
+    float requiredTravel[3];    // required travel for each joint
+    float jointSpeedScale[3];   // joint speed scale for pwm
+    float maxJointTravel;       // maximum travel needed between joints to follow a trajectory
+    float maxTrajectorySpeed;   // maximum speed reachable in a trajectory
+    float trajectorySpeed;
 };
 
 #endif
