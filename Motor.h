@@ -29,6 +29,7 @@ private:
 
     // public methods
     void move(float desiredAngle);
+    void setSpeed(float maxSpeedScale);
     void update();
     uint8_t send(uint8_t addr, char * data);
     byte * receive(uint8_t addr, uint8_t size);

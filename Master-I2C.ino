@@ -100,7 +100,8 @@ ThreadController multiThread = ThreadController();
 // initialize threads for multi tasking
 Thread commanderThread = Thread();    // to send commands
 Thread receiverThread = Thread();    // to receive data from motor
-Thread motionThread = Thread();    // to move the motor to pre defined position
+Thread motionThread = Thread();     // thread to move the leg
+Thread testThread = Thread();    // to move the motor to pre defined position automatically
 
 // function to read the master's serial bus and send the content to slave through i2c
 void sendCommand()
@@ -142,66 +143,24 @@ void sendCommand()
 void receiveData()
 {
     for(int i=0; i<numLegs; i++){
-        leg[i].update();
+        leg[i].readJointData();
     }
 
-    // for(int i=0; i<numJoints; i++){
-    //     byte *buffer;
-    //     buffer = receive(driverAddress[i]);
-    //
-    //     // recombine the separated 16bit data and assign it to corrent motor status variable
-    //     // assign 8bit motor status variables
-    //     int16_t angle = buffer[0];
-    //     angle = angle << 8 | buffer[1];
-    //     motor[i].status.current = buffer[2]*10;
-    //     motor[i].status.temperature = buffer[3];
-    //
-    //     // revert motor status data multipication to have the float number
-    //     motor[i].status.angle = angle / 10.0;
-    //
-    // // show data in serial output
-    // }
-    // if (showMotorData){
-    //     for(int i=0; i<numJoints; i++){
-    //         Serial.print(motor[i].status.angle);Serial.print('\t');
-    //         //Serial.print(motor[i].status.current);Serial.print('\t');
-    //     }
-    //     Serial.print('\n');
-    // }
     if (debugMode){
         Serial.print("X: ");Serial.print(leg[0].position[0]);Serial.print('\t');
-        Serial.print("Y: ");Serial.print(leg[0].position[1]);Serial.print('\t');
+        Serial.print("Y: ");Serial.print(leg[0].position[1]);Serial.print('\t');Serial.print('\t');
         Serial.print("Z: ");Serial.println(leg[0].position[2]);
     }
 }
 
-// function to send automatic commands to move the motor
+// function to update the leg position
 void motionControl()
 {
-    stepCounter += 1;
-    if (stepCounter < 150){
-        for(int i=0; i<numJoints; i++){
-            uint8_t flag = send(driverAddress[i], "G2A120");
-        }
-    }
-    else if (stepCounter >= 150 and stepCounter < 300){
-        for(int i=0; i<numJoints; i++){
-            uint8_t flag = send(driverAddress[i], "G2A0");
-        }
-    }
-    else if (stepCounter >= 300 and stepCounter < 450){
-        for(int i=0; i<numJoints; i++){
-            uint8_t flag = send(driverAddress[i], "G2A-120");
-        }
-    }
-    else if (stepCounter >= 450 and stepCounter < 600){
-        for(int i=0; i<numJoints; i++){
-            uint8_t flag = send(driverAddress[i], "G2A0");
-        }
-    }
-    else{
-        stepCounter = 0;
-    }
+    // update the joint requested angle and speed
+    // for(int8_t i=0; i<numLegs; ++i){
+    //     leg[i].update();
+    // }
+    leg[0].update();
 }
 
 void setup() {
@@ -215,14 +174,18 @@ void setup() {
     receiverThread.onRun(receiveData);
     receiverThread.setInterval(10);
 
+    motionThread.onRun(motionControl);
+    motionThread.setInterval(10);
+
     // Adds threads to the controller
     multiThread.add(&commanderThread);
     multiThread.add(&receiverThread);
+    multiThread.add(&motionThread);
 
     if (autoDriverTest){
-        motionThread.onRun(motionControl);
-        motionThread.setInterval(10);
-        multiThread.add(&motionThread);
+        testThread.onRun(autoTest);
+        testThread.setInterval(10);
+        multiThread.add(&testThread);
     }
 
     if (manualDriverTest){
@@ -234,7 +197,7 @@ void setup() {
 
     // assuming all joint angles are zero in the beginning
     // in the future a homing algorithm will make sure this assumption is correct
-    for(int8_t i=0; i<4; ++i){
+    for(int8_t i=0; i<numLegs; ++i){
         leg[i].jointAngle[0] = jointNeutral[0];
         leg[i].jointAngle[1] = jointNeutral[1];
         leg[i].jointAngle[2] = jointNeutral[2];

@@ -19,6 +19,13 @@ void Motor::move(float desiredAngle)
     }
 }
 
+void Motor::setSpeed(float maxSpeedScale)
+{
+    char command[10];
+    uint8_t n = sprintf(command, "G3B%f", maxSpeedScale);
+    send(address, command);
+}
+
 // function to update motor data such as angle, speed, acceleration
 void Motor::update()
 {

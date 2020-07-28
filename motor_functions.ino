@@ -15,12 +15,11 @@ void neutral(){
 // return all joints to their zero position
 void zero(){
     Serial.println("Zero Position ...");
+    float p[3] = {X_OFFSET, 0.0, L1+L2-2};
     for(int8_t i=0; i<4; ++i){
-        float p[3] = {X_OFFSET, 0.0, L1+L2};
-        leg[i].coordinateToJointAngle(p);
-        // leg[i].position = {X_OFFSET, 0.0, L1+L2};
-        // leg[i].jointAngle = {0.0, 0.0, 0.0};
-        // leg[i].moveLeg();
+        for(int j=0; j<3; j++){
+            leg[i].waypoint[j] = p[j];
+        }
     }
 }
 
@@ -33,13 +32,31 @@ void moveLeg(uint8_t legNumber)
     }
 }
 
-float getTrajectory(int t, int pInit, int pFinal, int period){
-    // t        --> current time (msec)
-    // pInit    --> initial position
-    // pfinal   --> final position
-    // period   --> the period that takes to move from initial to final position (msec)
-    // compute the stepper speed with a minimum accel trajectory
-    float desiredPosition = 2*(pInit-pFinal)*pow(t,3)/(pow(period,3)) - 3*(pInit-pFinal)*pow(t,2)/(pow(period,2)) + pInit;
-    //computedPosition = min(max(computedPosition,pInit),pFinal);
-    return desiredPosition;
+// function to send automatic commands to move the motor
+void autoTest()
+{
+    stepCounter += 1;
+    if (stepCounter < 150){
+        for(int i=0; i<numJoints; i++){
+            uint8_t flag = send(driverAddress[i], "G2A120");
+        }
+    }
+    else if (stepCounter >= 150 and stepCounter < 300){
+        for(int i=0; i<numJoints; i++){
+            uint8_t flag = send(driverAddress[i], "G2A0");
+        }
+    }
+    else if (stepCounter >= 300 and stepCounter < 450){
+        for(int i=0; i<numJoints; i++){
+            uint8_t flag = send(driverAddress[i], "G2A-120");
+        }
+    }
+    else if (stepCounter >= 450 and stepCounter < 600){
+        for(int i=0; i<numJoints; i++){
+            uint8_t flag = send(driverAddress[i], "G2A0");
+        }
+    }
+    else{
+        stepCounter = 0;
+    }
 }
