@@ -1,2 +1,3 @@
-# Master-I2C
-piece of code used in master sender/receiver for i2c protocol
+# Robot Dog
+
+Quadrupedal robot inverse kinematics and motor control. This software communicates with brushed DC motor controllers found in https://github.com/masoudhassani/motor_encoder to control a robot dog with 12 joints
